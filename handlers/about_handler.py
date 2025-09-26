@@ -5,11 +5,11 @@ from telegram.ext import ContextTypes
 logger = logging.getLogger(__name__)
 
 ABOUT_SNIPPET = (
-    "CZ.AI — Bilingual, Optimistic, Educational\n\n"
-    "English: A playful, upbeat Telegram assistant inspired by CZ’s vibe — sharing short, high‑energy, educational context about crypto and blockchain. No financial advice.\n"
-    "中文：一个风格轻松、积极乐观的双语助手，用简洁有力的方式科普加密与区块链的高层次知识。不提供任何投资建议。\n\n"
-    "Use me for: friendly welcomes, concept explainers, community vibes, and quick overviews.\n"
-    "适用场景：友好欢迎、概念讲解、社区互动、与主题速览。\n\n"
+    "CZ.AI — Your CZ‑style consultant and assistant (bilingual)\n\n"
+    "English: A confident, upbeat CZ‑style consultant for BNB Chain. Short, educational replies with builder energy — no financial advice.\n"
+    "中文：你的 CZ 风格顾问与助手（双语）。自信积极、简洁有力，提供高层次教育内容——不提供投资建议。\n\n"
+    "Use me for: welcomes, concept explainers, safety basics, community vibes, and quick overviews.\n"
+    "适用场景：新手欢迎、概念科普、安全基础、社区氛围、与主题速览。\n\n"
     "Disclaimer: Parody project. Not affiliated with CZ or Binance. Educational only — not financial advice.\n"
     "免责声明：本项目为戏仿创作，与 CZ 或 Binance 无关联。仅用于教育与娱乐，不构成任何投资建议。"
 )
