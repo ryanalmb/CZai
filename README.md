@@ -114,6 +114,10 @@ docker run -d --env-file .env czai-bot
 - `/CZ What's new with Binance regulation today?` → Get latest news with web search results
 - `/CZ How to manage risk?` → Get risk management principles
 
+## Website
+
+- A static, bilingual website lives under `website/`. See `website/DEPLOY.md` for hosting instructions.
+
 ## Architecture
 
 - Webhook mode ready for serverless (Render). The bot sets its Telegram webhook to WEBHOOK_BASE_URL/WEBHOOK_PATH and listens on PORT.
