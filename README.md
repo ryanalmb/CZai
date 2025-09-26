@@ -27,7 +27,7 @@ The default configuration uses `gemini-1.5-flash` as the primary model. You can 
 
 - Python 3.8+
 - Telegram Bot Token
-- Gemini API Key
+- Gemini API Key(s)
 
 ## Setup
 
@@ -52,7 +52,7 @@ Create a `.env` file based on `.env.example`:
 cp .env.example .env
 ```
 
-Edit `.env` with your configuration:
+Edit `.env` with your configuration (you can set one GEMINI_API_KEY or multiple in GEMINI_API_KEYS):
 
 ```
 TELEGRAM_TOKEN=your_telegram_bot_token_here
@@ -139,8 +139,9 @@ Search results are cited in the response with up to 2 URLs.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| GEMINI_API_KEYS | Comma-separated Gemini API keys for failover | optional |
 | TELEGRAM_TOKEN | Telegram Bot token | required |
-| GEMINI_API_KEY | Gemini API key | required |
+| GEMINI_API_KEY | Single Gemini API key | required if GEMINI_API_KEYS not set |
 | GEMINI_MODEL | Gemini model to use | gemini-2.5-flash |
 | USE_GEMINI_SEARCH | Enable/disable google_search tool | true |
 | ADMIN_ID | Admin user ID for /announce command | required |

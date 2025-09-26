@@ -7,15 +7,24 @@ logger = logging.getLogger(__name__)
 class AIService:
     """Service class to handle all Gemini API interactions, migrated to google-genai with fallback.
 
-    This implementation prefers the new `google-genai` SDK, but will fall back to
-    the legacy `google-generativeai` SDK if the new one isn't available at runtime.
+    - Supports multiple API keys with failover rotation: uses the current key until an API error
+      occurs, then advances to the next key. After the last key fails, it loops back to the first.
+    - Primary SDK: google-genai. Fallback SDK: google-generativeai.
+    - Bilingual optimistic persona (English first, then Simplified Chinese).
     """
 
     def __init__(self):
-        """Initialize the AI service with API key and SDK selection."""
+        """Initialize the AI service with API keys and SDK selection."""
         self.model_name = settings.gemini_model
+        # Multi-key support
+        self.gemini_keys = settings.gemini_api_keys if getattr(settings, "gemini_api_keys", []) else [settings.gemini_api_key]
+        if not self.gemini_keys:
+            raise ValueError("No Gemini API keys configured")
+        self.key_index = 0  # current active key index
+
         self.sdk = None  # "new" or "old"
-        self.client = None
+        self.clients_new = []  # list of google-genai Clients (one per key)
+        self.genai_old = None
         self._new_types = {}
 
         # System prompt template for CZ.AI
@@ -29,7 +38,7 @@ class AIService:
             "Keep tone light, satirical, and respectful."
         )
 
-        # Attempt to use the new google-genai SDK first
+        # Attempt to use the new google-genai SDK first (preferred)
         try:
             import google.genai as genai_new  # type: ignore
             from google.genai.types import GenerateContentConfig, Tool, GoogleSearch  # type: ignore
@@ -41,18 +50,17 @@ class AIService:
                 "Tool": Tool,
                 "GoogleSearch": GoogleSearch,
             }
-            # New SDK uses a Client instance
-            self.client = genai_new.Client(api_key=settings.gemini_api_key)
-            logger.info("Using google-genai SDK")
+            # Create a client per key
+            for k in self.gemini_keys:
+                self.clients_new.append(genai_new.Client(api_key=k))
+            logger.info("Using google-genai SDK with %d key(s)", len(self.clients_new))
         except Exception as e:  # noqa: BLE001
             logger.info("google-genai not available or failed to initialize, falling back to google-generativeai: %s", e)
-            # Fallback to legacy SDK
+            # Fallback to legacy SDK (configure per request with the active key)
             import google.generativeai as genai_old  # type: ignore
-
             self.sdk = "old"
             self.genai_old = genai_old
-            genai_old.configure(api_key=settings.gemini_api_key)
-            logger.info("Using google-generativeai SDK (legacy)")
+            logger.info("Using google-generativeai SDK (legacy) with %d key(s)", len(self.gemini_keys))
 
     def needs_grounding(self, query: str) -> bool:
         """Determine if a query needs web grounding based on keywords."""
@@ -194,88 +202,97 @@ class AIService:
         )
 
     def generate_response(self, user_query: str) -> str:
-        """Generate a response using Gemini with optional grounding."""
-        try:
-            # Instant sunshine mode for greetings — no LLM needed
-            if self.is_greeting(user_query):
-                return (
-                    "Hey hey! 🌞✨ Amazing to see you, fren! Energy’s high, optimism’s higher — let’s make today legendary! How can I help you shine?\n"
-                    "嘿嘿！🌞✨ 很高兴见到你，朋友！能量满格，乐观加倍——今天一起创造传奇吧！我可以怎样帮助你闪耀？"
-                )
-
-            # Build user prompt with safe behavior baked in
-            user_prompt = (
-                f"User question: {user_query}\n"
-                "Instructions: Respond in both English and Simplified Chinese (简体中文). Use a very optimistic, upbeat, high‑energy tone. "
-                "Provide general, educational information only. Do not provide financial, investment, or trading advice or recommendations (no buy/sell/hold, price targets, timing, or allocations). "
-                "If asked for recommendations, politely decline and pivot to educational context."
-            )
-
-            use_grounding = (
-                settings.use_gemini_search and
-                not settings.context7_disabled and
-                self.needs_grounding(user_query)
-            )
-
-            if self.sdk == "new":
-                GenerateContentConfig = self._new_types["GenerateContentConfig"]
-                Tool = self._new_types["Tool"]
-                GoogleSearch = self._new_types["GoogleSearch"]
-
-                config = GenerateContentConfig(
-                    temperature=0.9,
-                    max_output_tokens=1024,
-                    system_instruction=self.system_prompt,
-                )
-
-                if use_grounding:
-                    response = self.client.models.generate_content(
-                        model=self.model_name,
-                        contents=user_prompt,
-                        config=config,
-                        tools=[Tool(google_search=GoogleSearch())],
-                    )
-                else:
-                    response = self.client.models.generate_content(
-                        model=self.model_name,
-                        contents=user_prompt,
-                        config=config,
-                    )
-            else:
-                # Legacy SDK path
-                genai_old = self.genai_old
-                model = genai_old.GenerativeModel(
-                    model_name=self.model_name,
-                    system_instruction=self.system_prompt,
-                )
-                generation_config = genai_old.GenerationConfig(
-                    temperature=0.9,
-                    max_output_tokens=1024,
-                )
-                if use_grounding:
-                    chat = model.start_chat()
-                    response = chat.send_message(
-                        user_prompt,
-                        generation_config=generation_config,
-                        tools=[genai_old.protos.Tool(google_search=genai_old.protos.GoogleSearch())],
-                    )
-                else:
-                    response = model.generate_content(
-                        user_prompt,
-                        generation_config=generation_config,
-                    )
-
-            return self._handle_response(response, user_query)
-
-        except Exception as e:  # noqa: BLE001
-            logger.error("Error generating response for user query '%s': %s", user_query, e)
-            error_msg = str(e).lower()
-            if "safety" in error_msg or "block" in error_msg:
-                return (
-                    "I keep things educational and safe, so I can’t answer that directly — want a high‑level overview instead?\n"
-                    "为了安全与合规，我不能直接回答这个问题——要不要来个高层次的背景讲解？"
-                )
+        """Generate a response using Gemini with optional grounding and key failover."""
+        # Instant sunshine mode for greetings — no LLM needed
+        if self.is_greeting(user_query):
             return (
-                "(No fresh web results; answer may be slightly out of date — but I’ll keep the vibes bright!)\n"
-                "（暂时没有最新的网页结果；信息可能略有延迟——不过积极乐观的能量不会断档！）"
+                "Hey hey! 🌞✨ Amazing to see you, fren! Energy’s high, optimism’s higher — let’s make today legendary! How can I help you shine?\n"
+                "嘿嘿！🌞✨ 很高兴见到你，朋友！能量满格，乐观加倍——今天一起创造传奇吧！我可以怎样帮助你闪耀？"
             )
+
+        # Build user prompt with safe behavior baked in
+        user_prompt = (
+            f"User question: {user_query}\n"
+            "Instructions: Respond in both English and Simplified Chinese (简体中文). Use a very optimistic, upbeat, high‑energy tone. "
+            "Provide general, educational information only. Do not provide financial, investment, or trading advice or recommendations (no buy/sell/hold, price targets, timing, or allocations). "
+            "If asked for recommendations, politely decline and pivot to educational context."
+        )
+
+        use_grounding = (
+            settings.use_gemini_search and
+            not settings.context7_disabled and
+            self.needs_grounding(user_query)
+        )
+
+        num_keys = len(self.gemini_keys)
+        # Try with the current key; on API error, advance to the next and retry, looping over all keys once.
+        for attempt in range(num_keys):
+            idx = self.key_index
+            try:
+                if self.sdk == "new":
+                    GenerateContentConfig = self._new_types["GenerateContentConfig"]
+                    Tool = self._new_types["Tool"]
+                    GoogleSearch = self._new_types["GoogleSearch"]
+
+                    config = GenerateContentConfig(
+                        temperature=0.9,
+                        max_output_tokens=1024,
+                        system_instruction=self.system_prompt,
+                    )
+                    client = self.clients_new[idx]
+                    if use_grounding:
+                        response = client.models.generate_content(
+                            model=self.model_name,
+                            contents=user_prompt,
+                            config=config,
+                            tools=[Tool(google_search=GoogleSearch())],
+                        )
+                    else:
+                        response = client.models.generate_content(
+                            model=self.model_name,
+                            contents=user_prompt,
+                            config=config,
+                        )
+                else:
+                    # Legacy SDK path: configure per-request with the active key
+                    genai_old = self.genai_old
+                    genai_old.configure(api_key=self.gemini_keys[idx])
+                    model = genai_old.GenerativeModel(
+                        model_name=self.model_name,
+                        system_instruction=self.system_prompt,
+                    )
+                    generation_config = genai_old.GenerationConfig(
+                        temperature=0.9,
+                        max_output_tokens=1024,
+                    )
+                    if use_grounding:
+                        chat = model.start_chat()
+                        response = chat.send_message(
+                            user_prompt,
+                            generation_config=generation_config,
+                            tools=[genai_old.protos.Tool(google_search=genai_old.protos.GoogleSearch())],
+                        )
+                    else:
+                        response = model.generate_content(
+                            user_prompt,
+                            generation_config=generation_config,
+                        )
+
+                # If we reached here, call succeeded; keep using this key
+                return self._handle_response(response, user_query)
+
+            except Exception as e:  # noqa: BLE001
+                # On any API exception, advance to the next key and try again
+                logger.warning(
+                    "Gemini API error with key index %d: %s. Switching to next key (attempt %d/%d).",
+                    idx, e, attempt + 1, num_keys
+                )
+                self.key_index = (self.key_index + 1) % num_keys
+                continue
+
+        # If all keys failed in this cycle
+        logger.error("All configured Gemini API keys failed for this request.")
+        return (
+            "We’ve run into a temporary connection issue, but the sun will rise again — please try once more!\n"
+            "我们遇到了一点临时连接问题，但太阳依然会升起——请再试一次！"
+        )
