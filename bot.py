@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler
 from config.settings import settings
@@ -13,36 +12,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def main():
-    """Main function to run the Telegram bot."""
+def main():
+    """Run the Telegram bot in webhook or polling mode based on settings."""
     logger.info("Starting CZ.AI bot...")
     logger.info("CZ.AI is a fan-made parody. Not affiliated with CZ or Binance.")
-    
-    # Create the application
+
     application = ApplicationBuilder().token(settings.telegram_token).build()
-    
+
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("CZ", cz_command))
     application.add_handler(CommandHandler("announce", announce_command))
-    
-    logger.info("CZ.AI bot is running...")
-    
-    # Run the bot - run_polling() handles the event loop internally
-    async with application:
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling()
-        
-        # Keep the bot running
-        try:
-            while True:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            logger.info("Bot stopped by user")
-        finally:
-            await application.updater.stop()
-            await application.stop()
+
+    if settings.use_webhook:
+        if not settings.webhook_base_url:
+            raise ValueError("WEBHOOK_BASE_URL must be set when USE_WEBHOOK=true")
+        webhook_url = f"{settings.webhook_base_url.rstrip('/')}/{settings.webhook_path.lstrip('/')}"
+        logger.info("Running in webhook mode on port %s with path /%s", settings.port, settings.webhook_path)
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=settings.port,
+            url_path=settings.webhook_path,
+            webhook_url=webhook_url,
+            secret_token=(settings.webhook_secret or None),
+        )
+    else:
+        logger.info("Running in polling mode")
+        application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

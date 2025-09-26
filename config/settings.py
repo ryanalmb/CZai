@@ -16,6 +16,13 @@ class Settings:
         self.rate_limit_seconds = int(os.getenv("RATE_LIMIT_SECONDS", 30))
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         self.context7_disabled = os.getenv("CONTEXT7_MCP_DISABLED_AT_RUNTIME", "true").lower() == "true"
+
+        # Webhook (Render/Serverless)
+        self.use_webhook = os.getenv("USE_WEBHOOK", "true").lower() == "true"
+        self.webhook_base_url = os.getenv("WEBHOOK_BASE_URL", "")  # e.g., https://your-service.onrender.com
+        self.webhook_path = os.getenv("WEBHOOK_PATH", "webhook")
+        self.webhook_secret = os.getenv("WEBHOOK_SECRET", "")
+        self.port = int(os.getenv("PORT", 8080))
         
         # Validate required environment variables
         if not self.telegram_token:

@@ -65,13 +65,30 @@ LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR
 CONTEXT7_MCP_DISABLED_AT_RUNTIME=true
 ```
 
-### 4. Run the Bot
+### 4. Run the Bot (Local)
 
 ```bash
-python bot.py
+python run_bot.py
 ```
 
-## Docker Deployment
+### Deploy to Render (Free Web Service)
+
+1) Fork this repo and connect it to Render: https://render.com
+2) Create a new Web Service, select your repo and branch.
+3) Environment
+   - Runtime: Docker (uses provided Dockerfile)
+   - Start command: python run_bot.py
+   - Environment Variables: TELEGRAM_TOKEN, GEMINI_API_KEY, ADMIN_ID, USE_WEBHOOK=true, WEBHOOK_BASE_URL=https://<your-service>.onrender.com, GEMINI_MODEL=gemini-1.5-flash
+4) After first deploy, Render gives you the service URL; ensure WEBHOOK_BASE_URL matches it.
+5) Redeploy if you update env vars.
+
+Notes:
+- The bot runs in webhook mode on path /webhook. Telegram will POST updates to WEBHOOK_BASE_URL/webhook.
+- Optionally set WEBHOOK_SECRET for extra verification.
+- Render may sleep on inactivity; Telegram retries deliveries so it usually still works.
+
+
+## Docker Deployment (Local)
 
 To run with Docker:
 
@@ -86,7 +103,7 @@ docker run -d --env-file .env czai-bot
 ## Commands
 
 - `/start` - Start the bot and get welcome message
-- `/CZ <question>` - Ask CZ-style questions about crypto markets
+- `/CZ <question>` - Ask CZ-style questions about crypto markets (bilingual, optimistic)
 - `/announce <message>` - Admin-only command to send announcements (requires ADMIN_ID)
 
 ## Example Usage
@@ -96,6 +113,9 @@ docker run -d --env-file .env czai-bot
 - `/CZ How to manage risk?` → Get risk management principles
 
 ## Architecture
+
+- Webhook mode ready for serverless (Render). The bot sets its Telegram webhook to WEBHOOK_BASE_URL/WEBHOOK_PATH and listens on PORT.
+
 
 - `bot.py` - Main entry point
 - `config/settings.py` - Configuration management

@@ -64,11 +64,10 @@ def main():
     try:
         # Import and run the main bot
         from bot import main as bot_main
-        import asyncio
         
         print("✅ CZ.AI bot started successfully!")
         print("💡 Bot is now running. Press Ctrl+C to stop.")
-        asyncio.run(bot_main())
+        bot_main()
     except KeyboardInterrupt:
         print("\n⚠️  Bot stopped by user")
         sys.exit(0)
