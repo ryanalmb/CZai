@@ -24,5 +24,19 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 .bullets { line-height: 1.8; }
 .note { color: var(--muted); font-size: 14px; }
 .site-footer { border-top: 1px solid #1c2233; padding: 22px 0; }
+
+/* CA Bar */
+.ca-bar { background: #0f1320; border-bottom: 1px solid #1b2030; }
+.ca-bar .container { display: flex; align-items: center; justify-content: center; padding: 8px 0; gap: 8px; }
+.ca-label { color: var(--muted); font-size: 14px; }
+.ca-value { color: var(--text); font-weight: 700; letter-spacing: 0.4px; }
+
+/* Join Us */
+.join { padding: 36px 0; text-align: center; }
+.join h2 { margin-bottom: 10px; }
+.join p { color: var(--muted); margin-top: 0; }
+.socials { display: inline-flex; gap: 12px; margin-top: 12px; }
+.socials .btn { min-width: 140px; }
+
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .muted { color: var(--muted); font-size: 13px; }
