@@ -4,6 +4,7 @@ from config.settings import settings
 from handlers.start_handler import start_command
 from handlers.cz_handler import cz_command
 from handlers.announce_handler import announce_command
+from handlers.about_handler import about_command
 
 # Configure logging
 logging.basicConfig(
@@ -23,6 +24,7 @@ def main():
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("CZ", cz_command))
     application.add_handler(CommandHandler("announce", announce_command))
+    application.add_handler(CommandHandler("about", about_command))
 
     if settings.use_webhook:
         if not settings.webhook_base_url:

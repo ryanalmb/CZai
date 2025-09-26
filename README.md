@@ -42,6 +42,7 @@ cd czai-bot
 
 ```bash
 pip install -r requirements.txt
+# Note: We use python-telegram-bot[webhooks] to enable webhook mode
 ```
 
 ### 3. Configure Environment Variables
@@ -105,6 +106,7 @@ docker run -d --env-file .env czai-bot
 - `/start` - Start the bot and get welcome message
 - `/CZ <question>` - Ask CZ-style questions about crypto markets (bilingual, optimistic)
 - `/announce <message>` - Admin-only command to send announcements (requires ADMIN_ID)
+- `/about` - Get a concise, bilingual description of CZ.AI
 
 ## Example Usage
 
@@ -169,3 +171,4 @@ The bot follows a modular architecture:
 This project is for educational and entertainment purposes only. It is a parody and not affiliated with CZ or Binance.
 
 ⚠️ Not financial advice. Just CZ.AI vibes 🐂🚀
+
