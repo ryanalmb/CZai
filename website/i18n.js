@@ -20,7 +20,7 @@
     // If landing index.html has language buttons, wire them
     var enBtn = document.getElementById('btn-en');
     var cnBtn = document.getElementById('btn-cn');
-    if(enBtn){ enBtn.addEventListener('click', function(e){ e.preventDefault(); setLang('en'); window.location.href = '/website/app.html'; }); }
-    if(cnBtn){ cnBtn.addEventListener('click', function(e){ e.preventDefault(); setLang('cn'); window.location.href = '/website/app.html'; }); }
+    if(enBtn){ enBtn.addEventListener('click', function(){ setLang('en'); /* allow default href */ }); }
+    if(cnBtn){ cnBtn.addEventListener('click', function(){ setLang('cn'); /* allow default href */ }); }
   });
 })();
