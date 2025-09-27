@@ -1,5 +1,12 @@
 * { box-sizing: border-box; }
-:root { --bg: #0b0e14; --card: #121621; --text: #f5f7ff; --muted: #a9b0c2; --accent: #f3b41a; --accent2: #00c2ff; }
+:root { 
+  --bg: #0a0a0a;              /* Deep black */
+  --card: #111317;           /* Dark card */
+  --text: #f7f7f7;           /* Near white */
+  --muted: #b9beca;          /* Soft gray */
+  --accent: #f3ba2f;         /* BNB Yellow */
+  --accent2: #b38600;        /* Darker gold for hover/depth */
+}
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
 .container { width: min(1100px, 92%); margin: 0 auto; }
 .site-header { border-bottom: 1px solid #1c2233; position: sticky; top: 0; backdrop-filter: blur(6px); background: rgba(11,14,20,0.75); }
